@@ -41,14 +41,14 @@ WalkMesh::WalkMesh(std::vector< glm::vec3 > const &vertices_, std::vector< glm::
 }
 
 //project pt to the plane of triangle a,b,c and return the barycentric weights of the projected point:
-// Credits to Nolan Mass for this cleaner implementation of computing the barycentric weights
+// Note: I completed this implementation in class, along with Nolan Mass/Aria Zhang
 glm::vec3 barycentric_weights(glm::vec3 const &a, glm::vec3 const &b, glm::vec3 const &c, glm::vec3 const &pt) {
 	glm::vec3 N = glm::normalize(glm::cross(b-a,c-b));
 	glm::vec3 projection = pt - glm::dot(N, pt - a) * N;
 	
-	float wa = glm::dot(glm::cross(c-b, projection-c), N);
-	float wb = glm::dot(glm::cross(a-c, projection-a), N);
-	float wc = glm::dot(glm::cross(b-a, projection-b), N);
+	float wa = glm::dot(N, glm::cross(c-b, projection-c));
+	float wb = glm::dot(N, glm::cross(a-c, projection-a));
+	float wc = glm::dot(N, glm::cross(b-a, projection-b));
 	float sum = (wa + wb + wc);
 	return glm::vec3(wa,wb,wc)/sum;
 }
@@ -131,13 +131,16 @@ void WalkMesh::walk_in_triangle(WalkPoint const &start, glm::vec3 const &step, W
 	glm::vec3 const &b = vertices[start.indices.y];
 	glm::vec3 const &c = vertices[start.indices.z];
 
-	// Calculate end position weights
+	// Calculate end position weights in world space
+	//project 'step' into a barycentric-coordinates direction:
+	// End position = start + step
 	end.weights = barycentric_weights(a, b, c, to_world_point(start) + step);
-	glm::vec3 vel = end.weights - start.weights;
 
 	// Default - we take the full step, and the end vertex indices remain the same as our starting indices
+	//if no edge is crossed, event will just be taking the whole step:
 	time = 1.0f;
 	end.indices = start.indices;
+	glm::vec3 vel = end.weights - start.weights; // assuming time = 1.0, but we'll case + account in a bit
 
 	// figure out which edge (if any) is crossed first.
 	// set time and end appropriately.
@@ -159,18 +162,18 @@ void WalkMesh::walk_in_triangle(WalkPoint const &start, glm::vec3 const &step, W
 		// Remember: our convention is that when a WalkPoint is on an edge,
 		// then wp.weights.z == 0.0f (so will likely need to re-order the indices)
 		// CAREFUL! Weights can be negative! But indices are unsigned, obviously
-		glm::vec3 weights = start.weights + vel * tmin;
+		glm::vec3 temp_weights = start.weights + vel * tmin;
 		if (tmin == temp_time.x) {
 			end.indices = glm::uvec3(start.indices.y, start.indices.z, start.indices.x);
-			end.weights = glm::vec3(weights.y, weights.z, 0.0f);
+			end.weights = glm::vec3(temp_weights.y, temp_weights.z, 0.0f);
 		}	
 		else if (tmin == temp_time.y) {
 			end.indices = glm::uvec3(start.indices.z, start.indices.x, start.indices.y);
-			end.weights = glm::vec3(weights.z, weights.x, 0.0f);
+			end.weights = glm::vec3(temp_weights.z, temp_weights.x, 0.0f);
 		}
 		else if (tmin == temp_time.z) {
 			end.indices = glm::uvec3(start.indices.x, start.indices.y, start.indices.z);
-			end.weights = glm::vec3(weights.x, weights.y, 0.0f);
+			end.weights = glm::vec3(temp_weights.x, temp_weights.y, 0.0f);
 		}
 		else {
 			std::cout << "WHY" << std::endl;
