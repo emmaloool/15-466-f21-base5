@@ -17,15 +17,15 @@ EXPORT_SCENE=export-scene.py
 DIST=../dist
 
 all : \
-	$(DIST)/tart.pnct \
-	$(DIST)/tart.w \
-	$(DIST)/tart.scene \
+	$(DIST)/kitty.pnct \
+	$(DIST)/kitty.w \
+	$(DIST)/kitty.scene \
 
-$(DIST)/tart.pnct : tart.blend $(EXPORT_MESHES)
+$(DIST)/kitty.pnct : kitty.blend $(EXPORT_MESHES)
 	$(BLENDER) --background --python $(EXPORT_MESHES) -- '$<':Platforms '$@'
 
-$(DIST)/tart.scene : tart.blend $(EXPORT_SCENE)
+$(DIST)/kitty.scene : kitty.blend $(EXPORT_SCENE)
 	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':Platforms '$@'
 
-$(DIST)/tart.w : tart.blend $(EXPORT_WALKMESHES)
+$(DIST)/kitty.w : kitty.blend $(EXPORT_WALKMESHES)
 	$(BLENDER) --background --python $(EXPORT_WALKMESHES) -- '$<':WalkMeshes '$@'

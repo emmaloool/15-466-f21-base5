@@ -15,23 +15,23 @@
 
 #include <random>
 
-GLuint tart_meshes_for_lit_color_texture_program = 0;
-Load< MeshBuffer > tart_meshes(LoadTagDefault, []() -> MeshBuffer const * {
-	MeshBuffer const *ret = new MeshBuffer(data_path("tart.pnct"));
-	tart_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+GLuint cat_meshes_for_lit_color_texture_program = 0;
+Load< MeshBuffer > cat_meshes(LoadTagDefault, []() -> MeshBuffer const * {
+	MeshBuffer const *ret = new MeshBuffer(data_path("kitty.pnct"));
+	cat_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
 	return ret;
 });
 
-Load< Scene > tart_scene(LoadTagDefault, []() -> Scene const * {
-	return new Scene(data_path("tart.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
-		Mesh const &mesh = tart_meshes->lookup(mesh_name);
+Load< Scene > cat_scene(LoadTagDefault, []() -> Scene const * {
+	return new Scene(data_path("kitty.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+		Mesh const &mesh = cat_meshes->lookup(mesh_name);
 
 		scene.drawables.emplace_back(transform);
 		Scene::Drawable &drawable = scene.drawables.back();
 
 		drawable.pipeline = lit_color_texture_program_pipeline;
 
-		drawable.pipeline.vao = tart_meshes_for_lit_color_texture_program;
+		drawable.pipeline.vao = cat_meshes_for_lit_color_texture_program;
 		drawable.pipeline.type = mesh.type;
 		drawable.pipeline.start = mesh.start;
 		drawable.pipeline.count = mesh.count;
@@ -40,13 +40,13 @@ Load< Scene > tart_scene(LoadTagDefault, []() -> Scene const * {
 });
 
 WalkMesh const *walkmesh = nullptr;
-Load< WalkMeshes > tart_walkmeshes(LoadTagDefault, []() -> WalkMeshes const * {
-	WalkMeshes *ret = new WalkMeshes(data_path("tart.w"));
+Load< WalkMeshes > cat_walkmeshes(LoadTagDefault, []() -> WalkMeshes const * {
+	WalkMeshes *ret = new WalkMeshes(data_path("kitty.w"));
 	walkmesh = &ret->lookup("WalkMesh");
 	return ret;
 });
 
-PlayMode::PlayMode() : scene(*tart_scene) {
+PlayMode::PlayMode() : scene(*cat_scene) {
 	//create a player transform:
 	scene.transforms.emplace_back();
 	player.transform = &scene.transforms.back();
@@ -59,8 +59,8 @@ PlayMode::PlayMode() : scene(*tart_scene) {
 	player.camera->near = 0.01f;
 	player.camera->transform->parent = player.transform;
 
-	//player's eyes are 1.8 units above the ground:
-	player.camera->transform->position = glm::vec3(0.0f, 0.0f, 1.8f);
+	//player's eyes are 5.4 units above the ground:
+	player.camera->transform->position = glm::vec3(0.0f, 0.0f, 6.0f);
 
 	//rotate camera facing direction (-z) to player facing direction (+y):
 	player.camera->transform->rotation = glm::angleAxis(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -72,20 +72,28 @@ PlayMode::PlayMode() : scene(*tart_scene) {
 
 	// Collect identifying information for fruit transforms
 	for (auto &drawable : scene.drawables) {
-		if ((drawable.transform->name.find("Cantaloupe") != std::string::npos) || 
-			(drawable.transform->name.find("Honeydew") != std::string::npos)) {
-			std::cout << drawable.transform->name << std::endl;
-			fruit_drawables.push_back(&drawable);
-			available_fruit.push_back(true);
-		}
-
-		if (drawable.transform->name == "Watermelon") {
+		if (drawable.transform->name == "Park") {
 			std::cout << "player" << std::endl;
 			player_drawable = &drawable;
-			// std::cout << glm::to_string(player_drawable->transform->scale) << std::endl;
-			player_drawable->transform->scale = glm::vec3(0.05f, 0.05f, 0.05f);
-			player_drawable->transform->position = player.transform->position + glm::vec3(0.0f, 0.7f, 1.5f);
+			std::cout << "blender position:" << glm::to_string(player_drawable->transform->position) << std::endl;
+			std::cout << "game position:" << glm::to_string(player.transform->position) << std::endl;
+			std::cout << "game rotation:" << glm::to_string(player.transform->rotation) << std::endl;
+			player_drawable->transform->scale = glm::vec3(0.568f, 0.6f, 0.72f);
+			player_drawable->transform->position = player.transform->position + glm::vec3(3.0f, -5.0f, 0.0);
 		}
+		else if (drawable.transform->name.find("Fish") != std::string::npos) {
+			std::cout << drawable.transform->name << std::endl;
+
+			obj_drawables.push_back(&drawable);
+			available_objs.push_back(true);
+		}
+		else if (drawable.transform->name.find("Bone") != std::string::npos){
+			std::cout << drawable.transform->name << std::endl;
+
+			obj_drawables.push_back(&drawable);
+			available_objs.push_back(true);
+		}
+		// TODO handle other scene objects
 	}
 
 	std::cout << "---------------------------------------\n" << std::endl;
@@ -144,6 +152,7 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			);
 			glm::vec3 up = walkmesh->to_world_smooth_normal(player.at);
 			player.transform->rotation = glm::angleAxis(-motion.x * player.camera->fovy, up) * player.transform->rotation;
+			
 
 			float pitch = glm::pitch(player.camera->transform->rotation);
 			pitch += motion.y * player.camera->fovy;
@@ -170,24 +179,24 @@ void PlayMode::update(float elapsed) {
 
 	// Collision testing
 	{
-		for (auto i = 0; i < available_fruit.size(); i++) {
-			if (available_fruit[i] && (distance(fruit_drawables[i]->transform) < dist_threshold)) {
+		for (uint8_t i = 0; i < available_objs.size(); i++) {
+			if (available_objs[i] && (distance(obj_drawables[i]->transform) < dist_threshold)) {
 				num_collected++;
-				std::cout << "*** HIT " << fruit_drawables[i]->transform->name << "! ***" << std::endl;
-				available_fruit[i] = false;
+				std::cout << "*** HIT " << obj_drawables[i]->transform->name << "! ***" << std::endl;
+				available_objs[i] = false;
 
 				// erasing it is too hard, just make position lower lol
-				fruit_drawables[i]->transform->position.z = -10;
+				obj_drawables[i]->transform->position.z = -10;
 			}
 		}
 	}
 
-	player_drawable->transform->position = player.transform->position + glm::vec3(0.0f, 0.7, 1.5f);
+
 
 	//player walking:
 	{
 		//combine inputs into a move:
-		constexpr float PlayerSpeed = 5.0f;
+		constexpr float PlayerSpeed = 15.0f;
 		glm::vec2 move = glm::vec2(0.0f);
 		if (left.pressed && !right.pressed) move.x =-1.0f;
 		if (!left.pressed && right.pressed) move.x = 1.0f;
@@ -268,6 +277,10 @@ void PlayMode::update(float elapsed) {
 		camera->transform->position += move.x * right + move.y * forward;
 		*/
 	}
+
+	player_drawable->transform->position = player.transform->position + glm::vec3(3.0f, -5.0f, 0.0);
+	player_drawable->transform->rotation = player.transform->rotation;
+	// std::cout << glm::to_string(player.transform->position) << std::endl;
 
 	//reset button press counters:
 	left.downs = 0;

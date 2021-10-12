@@ -38,10 +38,17 @@ struct PlayMode : Mode {
 	} player;
 
 	// ---------------------- tart game state ----------------------
-	std::vector<Scene::Drawable *> fruit_drawables;
-	std::vector<bool> available_fruit; 		// used to skip/expedite collision testing for fruits already collected
+	typedef enum obj_type {
+		Fish = 0,
+		Bone = 1,
+		Grass = 2
+	} ObjectType;
 
-	float dist_threshold = 4.0f;
+	std::vector<Scene::Drawable *> obj_drawables;
+	std::vector<bool> available_objs; 		// used to skip/expedite collision testing for fruits already collected
+	std::vector<ObjectType> obj_types;
+
+	float dist_threshold = 12.0f;
 
 	uint8_t num_collected = 0;
 
