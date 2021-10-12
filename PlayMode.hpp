@@ -44,4 +44,6 @@ struct PlayMode : Mode {
 	float dist_threshold = 4.0f;
 
 	uint8_t num_collected = 0;
+
+	Scene::Drawable *player_drawable;
 };

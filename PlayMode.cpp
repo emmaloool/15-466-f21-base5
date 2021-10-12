@@ -10,6 +10,8 @@
 
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include <glm/ext.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 #include <random>
 
@@ -67,19 +69,25 @@ PlayMode::PlayMode() : scene(*tart_scene) {
 	player.at = walkmesh->nearest_walk_point(player.transform->position);
 
 	std::cout << "---------------------------------------" << std::endl;
+
 	// Collect identifying information for fruit transforms
-	size_t i = 0; 
 	for (auto &drawable : scene.drawables) {
-	// for (auto i = 0; i < scene.drawables.size(); i++) {
-		// Scene::Drawable &drawable = scene.drawables;
 		if ((drawable.transform->name.find("Cantaloupe") != std::string::npos) || 
 			(drawable.transform->name.find("Honeydew") != std::string::npos)) {
 			std::cout << drawable.transform->name << std::endl;
 			fruit_drawables.push_back(&drawable);
 			available_fruit.push_back(true);
-			i++;
+		}
+
+		if (drawable.transform->name == "Watermelon") {
+			std::cout << "player" << std::endl;
+			player_drawable = &drawable;
+			// std::cout << glm::to_string(player_drawable->transform->scale) << std::endl;
+			player_drawable->transform->scale = glm::vec3(0.05f, 0.05f, 0.05f);
+			player_drawable->transform->position = player.transform->position + glm::vec3(0.0f, 0.7f, 1.5f);
 		}
 	}
+
 	std::cout << "---------------------------------------\n" << std::endl;
 }
 
@@ -173,6 +181,8 @@ void PlayMode::update(float elapsed) {
 			}
 		}
 	}
+
+	player_drawable->transform->position = player.transform->position + glm::vec3(0.0f, 0.7, 1.5f);
 
 	//player walking:
 	{
