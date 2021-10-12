@@ -1,8 +1,8 @@
-# (TODO: your game's title)
+# Fishy Fiend!
 
-Author: (TODO: your name)
+Author: Emma Liu
 
-Design: (TODO: In two sentences or fewer, describe what is new and interesting about your game.)
+Design: After staying couped up all day without attention from his working parents, Park, my roommate's cat, wants to go on an adventure! Luckily he found a field full of yummy fishy snacks, and he's ready to eat!
 
 Screen Shot:
 
@@ -10,9 +10,13 @@ Screen Shot:
 
 How To Play:
 
-(TODO: describe the controls and (if needed) goals/strategy.)
+Navigate through the field to collect as many fish as you can, and avoid the bones - Park's no dog, bones aren't yummy to him!
 
-Sources: (TODO: list a source URL for any assets you did not create yourself. Make sure you have a license for the asset.)
+Controls: 
+- `W/A/S/D` to move Park around the scene
+- Mouse motion (activated by mouse click) pans camera POV around the scene (but Park won't necessarily face the direction it points in! He's got a mind of his own.) Press `ESCAPE` to quit camera panning view.
+
+Sources: All Blender items were built by myself.
 
 This game was built with [NEST](NEST.md).
 

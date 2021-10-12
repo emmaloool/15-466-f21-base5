@@ -37,20 +37,19 @@ struct PlayMode : Mode {
 		Scene::Camera *camera = nullptr;
 	} player;
 
-	// ---------------------- tart game state ----------------------
-	typedef enum obj_type {
-		Fish = 0,
-		Bone = 1,
-		Grass = 2
-	} ObjectType;
+	// ---------------------- cat game state ----------------------
 
 	std::vector<Scene::Drawable *> obj_drawables;
 	std::vector<bool> available_objs; 		// used to skip/expedite collision testing for fruits already collected
-	std::vector<ObjectType> obj_types;
-
+	std::vector<float> y_offset;
+	
 	float dist_threshold = 10.0f;
 
-	uint8_t num_collected = 0;
+	uint8_t fish_collected = 0;
+	uint8_t bones_collected = 0;
+	int8_t total_score = 0;
 
 	Scene::Drawable *player_drawable;
+
+	float game_time = 0.0f;
 };

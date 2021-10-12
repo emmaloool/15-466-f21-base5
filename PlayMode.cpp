@@ -68,17 +68,12 @@ PlayMode::PlayMode() : scene(*cat_scene) {
 	//start player walking at nearest walk point:
 	player.at = walkmesh->nearest_walk_point(player.transform->position);
 
-	std::cout << "---------------------------------------" << std::endl;
-
+	float offset = 0.0f;
 	// Collect identifying information for fruit transforms
 	for (auto &drawable : scene.drawables) {
 		if (drawable.transform->name == "Park") {
-			std::cout << "player" << std::endl;
 			player_drawable = &drawable;
-			std::cout << "blender position:" << glm::to_string(player_drawable->transform->position) << std::endl;
-			std::cout << "game position:" << glm::to_string(player.transform->position) << std::endl;
-			std::cout << "game rotation:" << glm::to_string(player.transform->rotation) << std::endl;
-			player_drawable->transform->scale = glm::vec3(0.568f, 0.6f, 0.72f);
+			// player_drawable->transform->parent = player.transform;
 			player_drawable->transform->position = player.transform->position + glm::vec3(0.0f, 5.0f, 5.0f);
 		}
 		else if (drawable.transform->name.find("Fish") != std::string::npos) {
@@ -86,17 +81,24 @@ PlayMode::PlayMode() : scene(*cat_scene) {
 
 			obj_drawables.push_back(&drawable);
 			available_objs.push_back(true);
+
+			drawable.transform->position += glm::vec3(0,0, 0.5f);
+			y_offset.push_back(offset);
+			offset += 0.05f;
 		}
 		else if (drawable.transform->name.find("Bone") != std::string::npos){
 			std::cout << drawable.transform->name << std::endl;
 
 			obj_drawables.push_back(&drawable);
 			available_objs.push_back(true);
+
+			drawable.transform->position += glm::vec3(0,0, 0.2f);
+			y_offset.push_back(offset);
+			offset += 0.05f;
 		}
 		// TODO handle other scene objects
 	}
 
-	std::cout << "---------------------------------------\n" << std::endl;
 }
 
 PlayMode::~PlayMode() {
@@ -169,20 +171,29 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 }
 
 void PlayMode::update(float elapsed) {
-	// Computes Euclidean distance between 3D points
-	auto distance = [this](Scene::Transform *object_transform) {
-		// Computes this relative to player and object positions, ignoring scale
-		glm::vec3 diff = object_transform->position - player.transform->position;
-		float dist = glm::length(diff);
-		return dist;
-	};
+	game_time += elapsed;
 
-	// Collision testing
+	// Collision testing & handling
 	{
+		// Computes Euclidean distance between 3D points
+		auto distance = [this](Scene::Transform *object_transform) {
+			// Computes this relative to player and object positions, ignoring scale
+			glm::vec3 diff = object_transform->position - player.transform->position;
+			float dist = glm::length(diff);
+			return dist;
+		};
+
 		for (uint8_t i = 0; i < available_objs.size(); i++) {
 			if (available_objs[i] && (distance(obj_drawables[i]->transform) < dist_threshold)) {
-				num_collected++;
-				std::cout << "*** HIT " << obj_drawables[i]->transform->name << "! ***" << std::endl;
+				if (obj_drawables[i]->transform->name.find("Fish") != std::string::npos) {
+					fish_collected++;
+					total_score += 15;
+				}
+				else if (obj_drawables[i]->transform->name.find("Bone") != std::string::npos) {
+					bones_collected++;
+					total_score -= 15;
+				}
+
 				available_objs[i] = false;
 
 				// erasing it is too hard, just make position lower lol
@@ -191,6 +202,14 @@ void PlayMode::update(float elapsed) {
 		}
 	}
 
+	// Update bobbing motion of items in scene
+	// Bobbing along one axis - code inspired by example here
+	// https://gamedev.stackexchange.com/questions/96878/how-to-animate-objects-with-bobbing-up-and-down-motion-in-unity/96880
+	for (uint8_t i = 0; i < obj_drawables.size(); i++) {
+		auto &obj = obj_drawables[i];
+		float wave_z = obj->transform->position.z + float(0.05) * sinf((game_time + y_offset[i]) * float(2.0));
+		obj->transform->position.z = wave_z;
+	}
 
 
 	//player walking:
@@ -265,6 +284,9 @@ void PlayMode::update(float elapsed) {
 				player.transform->rotation * glm::vec3(0.0f, 0.0f, 1.0f), //current up vector
 				walkmesh->to_world_smooth_normal(player.at) //smoothed up vector at walk location
 			);
+
+			// ------- rotate Park before updating player transform's rotation
+			player_drawable->transform->rotation = player.transform->rotation;
 			player.transform->rotation = glm::normalize(adjust * player.transform->rotation);
 		}
 
@@ -279,8 +301,6 @@ void PlayMode::update(float elapsed) {
 	}
 
 	player_drawable->transform->position = player.transform->position + glm::vec3(0.0f, 5.0f, 5.0f);
-	player_drawable->transform->rotation = player.transform->rotation;
-	// std::cout << glm::to_string(player.transform->position) << std::endl;
 
 	//reset button press counters:
 	left.downs = 0;
@@ -311,15 +331,15 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	scene.draw(*player.camera);
 
 	/* In case you are wondering if your walkmesh is lining up with your scene, try: */
-	{
-		glDisable(GL_DEPTH_TEST);
-		DrawLines lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
-		for (auto const &tri : walkmesh->triangles) {
-			lines.draw(walkmesh->vertices[tri.x], walkmesh->vertices[tri.y], glm::u8vec4(0x88, 0x00, 0xff, 0xff));
-			lines.draw(walkmesh->vertices[tri.y], walkmesh->vertices[tri.z], glm::u8vec4(0x88, 0x00, 0xff, 0xff));
-			lines.draw(walkmesh->vertices[tri.z], walkmesh->vertices[tri.x], glm::u8vec4(0x88, 0x00, 0xff, 0xff));
-		}
-	}
+	// {
+	// 	glDisable(GL_DEPTH_TEST);
+	// 	DrawLines lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
+	// 	for (auto const &tri : walkmesh->triangles) {
+	// 		lines.draw(walkmesh->vertices[tri.x], walkmesh->vertices[tri.y], glm::u8vec4(0x88, 0x00, 0xff, 0xff));
+	// 		lines.draw(walkmesh->vertices[tri.y], walkmesh->vertices[tri.z], glm::u8vec4(0x88, 0x00, 0xff, 0xff));
+	// 		lines.draw(walkmesh->vertices[tri.z], walkmesh->vertices[tri.x], glm::u8vec4(0x88, 0x00, 0xff, 0xff));
+	// 	}
+	// }
 
 	{ //use DrawLines to overlay some text:
 		glDisable(GL_DEPTH_TEST);
@@ -332,12 +352,12 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		));
 
 		constexpr float H = 0.09f;
-		lines.draw_text("Mouse motion looks; WASD moves; escape ungrabs mouse",
+		lines.draw_text("# Fish Collected: " + std::to_string(fish_collected) + "/11" + ", # Bones Collected: " + std::to_string(bones_collected) + ", Total Score: " + std::to_string(total_score),
 			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
 		float ofs = 2.0f / drawable_size.y;
-		lines.draw_text("Mouse motion looks; WASD moves; escape ungrabs mouse",
+		lines.draw_text("# Fish Collected: " + std::to_string(fish_collected) + "/11" + ", # Bones Collected: " + std::to_string(bones_collected) + ", Total Score: " + std::to_string(total_score),
 			glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
