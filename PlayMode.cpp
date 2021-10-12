@@ -13,24 +13,23 @@
 
 #include <random>
 
-GLuint phonebank_meshes_for_lit_color_texture_program = 0;
-Load< MeshBuffer > phonebank_meshes(LoadTagDefault, []() -> MeshBuffer const * {
-	// MeshBuffer const *ret = new MeshBuffer(data_path("tart.pnct"));
+GLuint tart_meshes_for_lit_color_texture_program = 0;
+Load< MeshBuffer > tart_meshes(LoadTagDefault, []() -> MeshBuffer const * {
 	MeshBuffer const *ret = new MeshBuffer(data_path("tart.pnct"));
-	phonebank_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+	tart_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
 	return ret;
 });
 
-Load< Scene > phonebank_scene(LoadTagDefault, []() -> Scene const * {
+Load< Scene > tart_scene(LoadTagDefault, []() -> Scene const * {
 	return new Scene(data_path("tart.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
-		Mesh const &mesh = phonebank_meshes->lookup(mesh_name);
+		Mesh const &mesh = tart_meshes->lookup(mesh_name);
 
 		scene.drawables.emplace_back(transform);
 		Scene::Drawable &drawable = scene.drawables.back();
 
 		drawable.pipeline = lit_color_texture_program_pipeline;
 
-		drawable.pipeline.vao = phonebank_meshes_for_lit_color_texture_program;
+		drawable.pipeline.vao = tart_meshes_for_lit_color_texture_program;
 		drawable.pipeline.type = mesh.type;
 		drawable.pipeline.start = mesh.start;
 		drawable.pipeline.count = mesh.count;
@@ -39,13 +38,13 @@ Load< Scene > phonebank_scene(LoadTagDefault, []() -> Scene const * {
 });
 
 WalkMesh const *walkmesh = nullptr;
-Load< WalkMeshes > phonebank_walkmeshes(LoadTagDefault, []() -> WalkMeshes const * {
+Load< WalkMeshes > tart_walkmeshes(LoadTagDefault, []() -> WalkMeshes const * {
 	WalkMeshes *ret = new WalkMeshes(data_path("tart.w"));
 	walkmesh = &ret->lookup("WalkMesh");
 	return ret;
 });
 
-PlayMode::PlayMode() : scene(*phonebank_scene) {
+PlayMode::PlayMode() : scene(*tart_scene) {
 	//create a player transform:
 	scene.transforms.emplace_back();
 	player.transform = &scene.transforms.back();
@@ -67,6 +66,21 @@ PlayMode::PlayMode() : scene(*phonebank_scene) {
 	//start player walking at nearest walk point:
 	player.at = walkmesh->nearest_walk_point(player.transform->position);
 
+	std::cout << "---------------------------------------" << std::endl;
+	// Collect identifying information for fruit transforms
+	size_t i = 0; 
+	for (auto &drawable : scene.drawables) {
+	// for (auto i = 0; i < scene.drawables.size(); i++) {
+		// Scene::Drawable &drawable = scene.drawables;
+		if ((drawable.transform->name.find("Cantaloupe") != std::string::npos) || 
+			(drawable.transform->name.find("Honeydew") != std::string::npos)) {
+			std::cout << drawable.transform->name << std::endl;
+			fruit_drawables.push_back(&drawable);
+			available_fruit.push_back(true);
+			i++;
+		}
+	}
+	std::cout << "---------------------------------------\n" << std::endl;
 }
 
 PlayMode::~PlayMode() {
@@ -138,10 +152,32 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 }
 
 void PlayMode::update(float elapsed) {
+	// Computes Euclidean distance between 3D points
+	auto distance = [this](Scene::Transform *object_transform) {
+		// Computes this relative to player and object positions, ignoring scale
+		glm::vec3 diff = object_transform->position - player.transform->position;
+		float dist = glm::length(diff);
+		return dist;
+	};
+
+	// Collision testing
+	{
+		for (auto i = 0; i < available_fruit.size(); i++) {
+			if (available_fruit[i] && (distance(fruit_drawables[i]->transform) < dist_threshold)) {
+				num_collected++;
+				std::cout << "*** HIT " << fruit_drawables[i]->transform->name << "! ***" << std::endl;
+				available_fruit[i] = false;
+
+				// erasing it is too hard, just make position lower lol
+				fruit_drawables[i]->transform->position.z = -10;
+			}
+		}
+	}
+
 	//player walking:
 	{
 		//combine inputs into a move:
-		constexpr float PlayerSpeed = 3.0f;
+		constexpr float PlayerSpeed = 5.0f;
 		glm::vec2 move = glm::vec2(0.0f);
 		if (left.pressed && !right.pressed) move.x =-1.0f;
 		if (!left.pressed && right.pressed) move.x = 1.0f;

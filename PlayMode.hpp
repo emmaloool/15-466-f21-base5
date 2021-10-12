@@ -36,4 +36,12 @@ struct PlayMode : Mode {
 		//camera is at player's head and will be pitched by mouse up/down motion:
 		Scene::Camera *camera = nullptr;
 	} player;
+
+	// ---------------------- tart game state ----------------------
+	std::vector<Scene::Drawable *> fruit_drawables;
+	std::vector<bool> available_fruit; 		// used to skip/expedite collision testing for fruits already collected
+
+	float dist_threshold = 4.0f;
+
+	uint8_t num_collected = 0;
 };
