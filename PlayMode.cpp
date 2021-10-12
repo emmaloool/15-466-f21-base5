@@ -79,7 +79,7 @@ PlayMode::PlayMode() : scene(*cat_scene) {
 			std::cout << "game position:" << glm::to_string(player.transform->position) << std::endl;
 			std::cout << "game rotation:" << glm::to_string(player.transform->rotation) << std::endl;
 			player_drawable->transform->scale = glm::vec3(0.568f, 0.6f, 0.72f);
-			player_drawable->transform->position = player.transform->position + glm::vec3(3.0f, -5.0f, 0.0);
+			player_drawable->transform->position = player.transform->position + glm::vec3(0.0f, 5.0f, 5.0f);
 		}
 		else if (drawable.transform->name.find("Fish") != std::string::npos) {
 			std::cout << drawable.transform->name << std::endl;
@@ -278,7 +278,7 @@ void PlayMode::update(float elapsed) {
 		*/
 	}
 
-	player_drawable->transform->position = player.transform->position + glm::vec3(3.0f, -5.0f, 0.0);
+	player_drawable->transform->position = player.transform->position + glm::vec3(0.0f, 5.0f, 5.0f);
 	player_drawable->transform->rotation = player.transform->rotation;
 	// std::cout << glm::to_string(player.transform->position) << std::endl;
 

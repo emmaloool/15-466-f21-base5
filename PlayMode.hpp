@@ -48,7 +48,7 @@ struct PlayMode : Mode {
 	std::vector<bool> available_objs; 		// used to skip/expedite collision testing for fruits already collected
 	std::vector<ObjectType> obj_types;
 
-	float dist_threshold = 12.0f;
+	float dist_threshold = 10.0f;
 
 	uint8_t num_collected = 0;
 
